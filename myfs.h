@@ -79,5 +79,7 @@ off_t mylseek(int myfd, off_t offset, int whence);
 struct myDIR *myopendir(const char *name);
 struct mydirent *myreaddir(struct myDIR *dirp);
 int myclosedir(struct myDIR *dirp);
+void write_single(int fd, int opos, char data);
+char read_single(int fd, int pos);
 
 #endif

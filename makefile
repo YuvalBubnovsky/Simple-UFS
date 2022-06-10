@@ -1,21 +1,32 @@
 CC = gcc
-CFLAGS = -g -Wall -fpic
+CFLAGS = -g -Wall -fPIC
 
-.PHONY: clean all
 
-all:  main libmyfs.so
-
-main: main.o
-	$(CC) $(CFLAGS) -o main main.o 
-
-main.o: main.c libmyfs.so 
-	$(CC) $(CFLAGS) -c -o main.o main.c libmyfs.o
+all: libmyfs.so libmylibc.so main main2
 
 libmyfs.so: myfs.o
-	(CC) -shared $(CFLAGS) -o libmyfs.so myfs.o
+	$(CC) -shared $(CFLAGS) myfs.o -o libmyfs.so
+
+libmylibc.so: myfs.o myfile.o
+	$(CC) -shared $(CFLAGS) myfile.o -o libmylibc.so
 
 myfs.o: myfs.c
-	$(CC) $(CFLAGS) -c myfs.c -o myfs.o
+	$(CC) $(CFLAGS) myfs.c -c
 
-clean:
-	rm -f main  *.o *.a *.so
+myfile.o: myfile.c
+	$(CC) $(CFLAGS) myfile.c -c
+
+main: libmyfs.so main.o
+	$(CC) $(CFLAGS) main.o ./libmyfs.so -o main
+
+main.o: main.c
+	$(CC) $(CFLAGS) main.c -c
+
+main2: libmylibc.so main2.o
+	$(CC) main2.o ./libmylibc.so -o main2
+
+main2.o: main2.c
+	$(CC) main2.c -c
+
+clean: 
+	rm -f *.so *.o a.out main main2

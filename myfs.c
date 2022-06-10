@@ -14,7 +14,7 @@ mydirent *directories;
 void mkfs(size_t size)
 {
     /* before we begin we check that there is a minimum amount of space for the UFS to function, even if it isn't very practical */
-    unsigned int structs_size = sizeof(block) + sizeof(inode) + sizeof(superblock);
+    unsigned int structs_size = sizeof(blocks) + sizeof(inodes) + sizeof(superblock);
     if (size <= structs_size)
     {
         printf("Please allocate at least a minimum of %ls bytes!\n", &structs_size);
@@ -28,14 +28,14 @@ void mkfs(size_t size)
 
     /* SECONDLY, we allocate memory according to previous calculation */
 
-    sb.num_of_blocks = space_for_blocks / sizeof(block); // rounded down
-    sb.num_of_inodes = space_for_inodes / sizeof(inode); // same
-    sb.size_of_blocks = sizeof(block);                   // this is data_size + 8 = 520 bytes
+    sb.num_of_blocks = space_for_blocks / sizeof(blocks); // rounded down
+    sb.num_of_inodes = space_for_inodes / sizeof(inodes); // same
+    sb.size_of_blocks = sizeof(blocks);                   // this is data_size + 8 = 520 bytes
 
     /* Prints for Control */
     printf("superblock inodes: %ld\n", sb.num_of_inodes);
     printf("superblock blocks: %ld\n", sb.num_of_blocks);
-    printf("superblock block size: %ld\n", sb.size_of_blocks);
+    printf("superblock blocks size: %ld\n", sb.size_of_blocks);
     /* */
 
     /* we want to use locals and not globals, because we intend to 'write' the memory to disk and then free the heap space we allocated */
@@ -43,8 +43,8 @@ void mkfs(size_t size)
     block *_blocks;
 
     /* not using the previous calculations in case they were rounded down! */
-    _inodes = malloc(sizeof(inode) * sb.num_of_inodes);
-    _blocks = malloc(sizeof(block) * sb.num_of_blocks);
+    _inodes = malloc(sizeof(inodes) * sb.num_of_inodes);
+    _blocks = malloc(sizeof(blocks) * sb.num_of_blocks);
     directories = malloc(num_of_dirents * sizeof(mydirent)); // num_of_dirents = 10 and is plenty for this exercise.
 
     /*THIRDLY, we initiate all the values to their appropriate control values and etc... */
@@ -75,11 +75,11 @@ void mkfs(size_t size)
     fwrite(&sb, sizeof(superblock), 1, file);
     for (i = 0; i < sb.num_of_inodes; i++)
     {
-        fwrite(&(_inodes[i]), sizeof(inode), 1, file);
+        fwrite(&(_inodes[i]), sizeof(inodes), 1, file);
     }
     for (i = 0; i < sb.num_of_inodes; i++)
     {
-        fwrite(&(_blocks[i]), sizeof(block), 1, file);
+        fwrite(&(_blocks[i]), sizeof(blocks), 1, file);
     }
     fclose(file);
 
@@ -111,10 +111,10 @@ int mymount(const char *source, const char *target, const char *filesystemtype, 
         {
             FILE *file = fopen(source, "r");
             fread(&sb, sizeof(superblock), 1, file);
-            inodes = malloc(sizeof(inode) * sb.num_of_inodes);
-            blocks = malloc(sizeof(block) * sb.num_of_blocks);
-            fread(inodes, sizeof(inode), sb.num_of_inodes, file);
-            fread(blocks, sizeof(block), sb.num_of_blocks, file);
+            inodes = malloc(sizeof(inodes) * sb.num_of_inodes);
+            blocks = malloc(sizeof(blocks) * sb.num_of_blocks);
+            fread(inodes, sizeof(inodes), sb.num_of_inodes, file);
+            fread(blocks, sizeof(blocks), sb.num_of_blocks, file);
             fclose(file);
         }
         else
@@ -270,7 +270,7 @@ ssize_t myread(int myfd, void *buf, size_t count)
     }
     if (is_inode_empty(myfd))
     {
-        printf("problem with inode!");
+        printf("problem with inodes!");
         return -1;
     }
 
@@ -288,7 +288,7 @@ ssize_t myread(int myfd, void *buf, size_t count)
         if (j == data_size)
         {
             j = 0;
-            b_index = blocks[b_index].next; // iterate to next block once were done reading this one.
+            b_index = blocks[b_index].next; // iterate to next blocks once were done reading this one.
         }
         str[i] = blocks[b_index].next;
         j++;
@@ -306,7 +306,7 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
     }
     if (is_inode_empty(myfd))
     {
-        printf("problem with inode!");
+        printf("problem with inodes!");
         return -1;
     }
 
@@ -314,13 +314,13 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
     int b_index = inodes[myfd].first_block;
     while (curr >= data_size)
     {
-        /* this segment ensures we write to the latest block in the chain, and to the latest position in that block. */
+        /* this segment ensures we write to the latest blocks in the chain, and to the latest position in that blocks. */
         b_index = blocks[b_index].next;
         curr -= data_size;
         /* what do we mean by this:
          * For example say w have size = 1050 bytes, this can be partitioned to 1024+26 bytes
-         * 1024 = 512 * 2, which is the size of 2 blocks, so we know to iterate over them twice to reach the third and newest block
-         * and at that newest block we want to write to the 26'th byte.
+         * 1024 = 512 * 2, which is the size of 2 blocks, so we know to iterate over them twice to reach the third and newest blocks
+         * and at that newest blocks we want to write to the 26'th byte.
          */
     }
 
@@ -337,9 +337,9 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
             }
             blocks[b_index].next = temp;
             b_index = temp;
-            blocks[b_index].next = last_in_chain; // to indicate this is the latest block!
+            blocks[b_index].next = last_in_chain; // to indicate this is the latest blocks!
             /* temp is assigned as the current blocks next, and thefore if we need to iterate to the next
-               we simply assign the same value to the current block index */
+               we simply assign the same value to the current blocks index */
             curr = 0;
         }
         blocks[b_index].data[curr] = ((char *)buf)[i];
@@ -424,4 +424,50 @@ int myclosedir(struct myDIR *dirp)
     }
 
     return 1;
+}
+
+void writebyte(int fd, int opos, char data) { 
+    /**
+     * @brief Write a SINGLE byte into a disk blocks. 
+     * The function calculates the correct relevant blocks (rb) that is needed to be accessed. 
+     * if the position that is needed to be wrriten is out of the bounds of the file,
+     * allocate a new disk blocks for it. 
+     */
+    int pos = opos;
+    int rb = inodes[fd].first_block;
+    while (pos>=data_size) {
+        pos-=data_size;
+        if (blocks[rb].next==-1) {
+            exit(1);
+        } else if (blocks[rb].next == -2) { // the current blocks is the last blocks, so we allocate a new blocks
+            blocks[rb].next = find_block(); 
+            rb = blocks[rb].next;
+            blocks[rb].next = -2; 
+        } else {
+            rb = blocks[rb].next;
+        }
+    }
+    if (opos>inodes[fd].size) {
+        inodes[fd].size = opos+1;
+    }
+    blocks[rb].data[pos] = data;
+}
+
+char readbyte(int fd, int pos) {
+    /**
+     * @brief Read a SINGLE byte from a disk blocks. 
+     * The function calculates the correct relevant blocks (rb) that is needed to be accessed. 
+     * The single byte is @return 'ed.
+     */
+    int rb = inodes[fd].first_block;
+    while (pos>=data_size) {
+        pos-=data_size;
+        rb = blocks[rb].next;
+        if (rb==-1) {
+            return -1;
+        } else if (rb == -2) {
+            return -1;
+        }
+    }
+    return blocks[rb].data[pos];
 }
