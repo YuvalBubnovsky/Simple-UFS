@@ -6,6 +6,19 @@
 #include <sys/types.h>
 #include <string.h>
 #include <aio.h> // contains ssize_t and off_t
+#include <unistd.h>
+#include <stdlib.h>
+
+#define max_files 10000
+#define data_size 512
+#define path_size 8
+#define fd_size 20
+/* some consts for radability! */
+const int none = -1;
+const int last_in_chain = -2;
+const unsigned int num_of_dirents = 10;
+/* workaround for creating several ufs's */
+int fs_index = 0;
 
 struct superblock
 {
@@ -16,16 +29,16 @@ struct superblock
 
 struct inode
 {
-    unsigned int first_block; // address of first block
+    int first_block; // index of first block
     size_t size;
-    char name[8];
+    char name[path_size];
 };
 
 
 struct block
 {
-    unsigned int next; // address of next block
-    char data[512]; //512 was historically used in some version of linux, source: https://www.youtube.com/watch?v=sLR17lUjTpc&ab_channel=C%2FC%2B%2BDublinUserGroup (lecture, not implementation)
+    int next; // index of next block
+    char data[data_size]; //512 was historically used in some version of linux, source: https://www.youtube.com/watch?v=sLR17lUjTpc&ab_channel=C%2FC%2B%2BDublinUserGroup (lecture, not implementation)
 };
 
 
@@ -33,26 +46,25 @@ struct myopenfile
 {
     int fd; // file descriptor
     unsigned int permission;
-    /*
-     * 0 - closed, not supposed to happen! (this struct is for *open* files)
-     * 1 - r (read only)
-     * 2 - rb (read binary only)
-     * 3 - w (read and write)
-     * 4 - wb (read and write binary only)
-     */
 };
 
 struct mydirent 
 {
-    int d_name[8];
-    int fd[20];
+    char d_name[path_size];
+    int fd[fd_size];
 };
 
 struct myDIR
 {
-    struct mydirent ent;
-    // TODO
+    struct mydirent* ent;
 };
+
+typedef struct superblock superblock;
+typedef struct inode inode;
+typedef struct block block;
+typedef struct myopenfile myopenfile;
+typedef struct mydirent mydirent;
+typedef struct myDIR myDIR;
 
 // https://man7.org/linux/man-pages/man0/dirent.h.0p.html
 
