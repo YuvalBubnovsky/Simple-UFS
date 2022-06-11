@@ -364,7 +364,7 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
 
 off_t mylseek(int myfd, off_t offset, int whence)
 {
-    // TODO ???
+    // didn't use this in our architecture, but it is a good idea to have.
     return -1;
 }
 
@@ -439,7 +439,7 @@ int myclosedir(struct myDIR *dirp)
     return 1;
 }
 
-void writebyte(int fd, int opos, char data)
+void write_single(int fd, int opos, char data)
 {
     /**
      * @brief Write a SINGLE byte into a disk blocks.
@@ -474,7 +474,7 @@ void writebyte(int fd, int opos, char data)
     blocks[rb].data[pos] = data;
 }
 
-char readbyte(int fd, int pos)
+char read_single(int fd, int pos)
 {
     /**
      * @brief Read a SINGLE byte from a disk blocks.

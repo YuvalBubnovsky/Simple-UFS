@@ -1,6 +1,8 @@
 #include "myfile.h"
 #include "myfs.h"
 
+// small main function to test our fs
+
 int main()
 {
     mkfs(100000);  
