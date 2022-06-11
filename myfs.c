@@ -28,58 +28,64 @@ void mkfs(size_t size)
 
     /* SECONDLY, we allocate memory according to previous calculation */
 
-    sb.num_of_blocks = space_for_blocks / sizeof(blocks); // rounded down
+    sb.num_of_blocks = space_for_blocks / sizeof(block); // rounded down
     sb.num_of_inodes = space_for_inodes / sizeof(inodes); // same
-    sb.size_of_blocks = sizeof(blocks);                   // this is data_size + 8 = 520 bytes
+    sb.size_of_blocks = sizeof(block);                   // this is data_size + 8 = 520 bytes
 
     /* Prints for Control */
     printf("superblock inodes: %ld\n", sb.num_of_inodes);
     printf("superblock blocks: %ld\n", sb.num_of_blocks);
     printf("superblock blocks size: %ld\n", sb.size_of_blocks);
-    /* */
 
     /* we want to use locals and not globals, because we intend to 'write' the memory to disk and then free the heap space we allocated */
     inode *_inodes;
     block *_blocks;
-
     /* not using the previous calculations in case they were rounded down! */
-    _inodes = malloc(sizeof(inodes) * sb.num_of_inodes);
-    _blocks = malloc(sizeof(blocks) * sb.num_of_blocks);
+    _inodes = malloc(sizeof(inode) * sb.num_of_inodes);
+    _blocks = malloc(sizeof(block) * sb.num_of_blocks);
     directories = malloc(num_of_dirents * sizeof(mydirent)); // num_of_dirents = 10 and is plenty for this exercise.
-
     /*THIRDLY, we initiate all the values to their appropriate control values and etc... */
 
     unsigned int i, j;
+    
     for (i = 0; i < sb.num_of_inodes; i++) // Initializes inodes
     {
         _inodes[i].first_block = none;
         strcpy(_inodes[i].name, "");
     }
+    
+   
     for (i = 0; i < sb.num_of_blocks; i++) // Initializes blocks
     {
         _blocks[i].next = none;
     }
-    for (i = 0; i < num_of_dirents; i++) // Initializes dirents
-    {
-        for (j = 0; j < fd_size; j++)
-        {
-            directories[i].fd[j] = -1;
-        }
-        strcpy(directories[i].d_name, "");
-    }
-
+    
+     for (i = 0; i < num_of_dirents; i++) // Initializes dirents
+     {
+         for (j = 0; j < fd_size; j++)
+         {
+             directories[i].fd[j] = -1;
+         }
+         strcpy(directories[i].d_name, "");
+     }
+     
     /* LASTLY, we write all of this into our 'disk', which in this exercise is a regular file instead of one that actually represents hardware. */
-    //char filename[7] = strncat("mfks_", (char)(fs_index + '0'), 1);
-    //FILE *file = fopen(filename, "w+"); //TODO
-    FILE * file = fopen("mkfs","W+");
-    fwrite(&sb, sizeof(superblock), 1, file);
+
+    //char *name = "mkfs.txt";
+    
+    FILE * file = fopen("mkfs","a+");
+    if (file == NULL) {
+        perror("fopen()");
+        exit(1);
+    }
+    //fwrite(&sb, sizeof(superblock), 1, file);
     for (i = 0; i < sb.num_of_inodes; i++)
     {
-        fwrite(&(_inodes[i]), sizeof(inodes), 1, file);
+        //fwrite(&(_inodes[i]), sizeof(inode), 1, file);
     }
     for (i = 0; i < sb.num_of_inodes; i++)
     {
-        fwrite(&(_blocks[i]), sizeof(blocks), 1, file);
+        //fwrite(&(_blocks[i]), sizeof(block), 1, file);
     }
     fclose(file);
 
@@ -119,8 +125,8 @@ int mymount(const char *source, const char *target, const char *filesystemtype, 
         }
         else
         {
-            printf("that file system does not exist! exiting...");
-            printf("HINT: run mkfs(10000); before this, and make sure you write the filename correctly!");
+            printf("that file system does not exist! exiting...\n");
+            printf("HINT: run mkfs(size) before this, or make sure you write the filename correctly!");
             exit(1);
         }
     }
@@ -148,15 +154,15 @@ int is_inode_empty(int myfd)
 int find_file(const char *pathname)
 {
     /**
-     * @brief 
+     * @brief
      * helper method that iteraates over inodes and looks for a file.
      */
 
-    for(int i = i; i< sb.num_of_inodes; i++)
+    for (int i = i; i < sb.num_of_inodes; i++)
     {
-        if(!strcmp(inodes[i].name, pathname))
+        if (!strcmp(inodes[i].name, pathname))
         {
-            return i; //found the file, and so return it's index.
+            return i; // found the file, and so return it's index.
         }
     }
     return 0;
@@ -187,14 +193,14 @@ int myopen(const char *pathname, int flags)
     char str[16];
     char *temp;
     strcpy(str, pathname);
-    temp = strtok(str,delimiter);
+    temp = strtok(str, delimiter);
     int directory = -1;
     if (temp != NULL)
     {
         char *name = myopendir(pathname)->ent->d_name;
-        for(int i = 0; i < num_of_dirents; i++)
+        for (int i = 0; i < num_of_dirents; i++)
         {
-            if(!strcmp(directories[i].d_name, name))
+            if (!strcmp(directories[i].d_name, name))
             {
                 directory = i;
                 break;
@@ -207,11 +213,11 @@ int myopen(const char *pathname, int flags)
     }
     int ans, helper, r;
     int index = find_file(pathname);
-    if(!index)
+    if (!index)
     {
         ans = -1;
-        int i,j;
-        for(i = 0; j < 20; j++)
+        int i, j;
+        for (i = 0; j < 20; j++)
         {
             if (inodes[i].first_block == none)
             {
@@ -222,9 +228,9 @@ int myopen(const char *pathname, int flags)
                     return -1;
                 }
                 inodes[i].first_block = helper;
-                for(j = 0; j < fd_size; j++)
+                for (j = 0; j < fd_size; j++)
                 {
-                    r= directories[directory].fd[j];
+                    r = directories[directory].fd[j];
                     if (r == none) // this means we found an empty fd, so we will use it.
                     {
                         directories[directory].fd[j] = i;
@@ -241,7 +247,7 @@ int myopen(const char *pathname, int flags)
 
         for (int i = 0; i < max_files; i++)
         {
-            if(open_files[j].fd == -1)
+            if (open_files[j].fd == -1)
             {
                 open_files[j].fd = ans;
                 open_files[j].permission = flags;
@@ -282,19 +288,23 @@ ssize_t myread(int myfd, void *buf, size_t count)
     }
 
     int b_index = inodes[myfd].first_block;
-    int j;
-    for (size_t i = 0; i < count; i++)
+    int ans = 0;
+    int j = 0;
+    for (unsigned int i = 0; i < count; i++)
     {
         if (j == data_size)
         {
             j = 0;
             b_index = blocks[b_index].next; // iterate to next blocks once were done reading this one.
         }
-        str[i] = blocks[b_index].next;
+
+        str[i] = blocks[b_index].data[j];
+        //str[i] = 'b';
         j++;
+        ans++;
     }
-    str[count] = '\0'; // manually ensures we have a null terminator.
-    return count;
+    //str[ans] = '\0'; // manually ensures we have a null terminator.
+    return ans;
 }
 
 ssize_t mywrite(int myfd, const void *buf, size_t count)
@@ -314,16 +324,17 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
     int b_index = inodes[myfd].first_block;
     while (curr >= data_size)
     {
-        /* this segment ensures we write to the latest blocks in the chain, and to the latest position in that blocks. */
+        /* this segment ensures we write to the latest block in the chain, and to the latest position in that block. */
         b_index = blocks[b_index].next;
         curr -= data_size;
         /* what do we mean by this:
-         * For example say w have size = 1050 bytes, this can be partitioned to 1024+26 bytes
+         * For example say we have size = 1050 bytes, this can be partitioned to 1024+26 bytes
          * 1024 = 512 * 2, which is the size of 2 blocks, so we know to iterate over them twice to reach the third and newest blocks
          * and at that newest blocks we want to write to the 26'th byte.
          */
     }
 
+    int ans = 0;
     int temp;
     for (size_t i = 0; i < count; i++)
     {
@@ -332,7 +343,8 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
             temp = find_block();
             if (temp < 0)
             {
-                count = i - 1; // this iteration is not added to the count.
+                printf("not enough blocks to write everything!");
+                //ans = i - 1; // this iteration is not added to the count.
                 break;         // we update count to be the exact amount of writes we did and then break.
             }
             blocks[b_index].next = temp;
@@ -344,14 +356,15 @@ ssize_t mywrite(int myfd, const void *buf, size_t count)
         }
         blocks[b_index].data[curr] = ((char *)buf)[i];
         curr++;
+        ans++;
     }
-    inodes[myfd].size += count; // this is the ONLY place where we update an inodes size value.
-    return count;
+    inodes[myfd].size += ans; // this is the ONLY place where we update an inodes size value.
+    return ans;
 }
 
 off_t mylseek(int myfd, off_t offset, int whence)
 {
-    //TODO ???
+    // TODO ???
     return -1;
 }
 
@@ -362,7 +375,7 @@ struct myDIR *myopendir(const char *name)
      * iterates over all the dirents and searches for the dirent that matches the name var
      * if that does not exist, use the first empty one.
      */
-    myDIR* ans = malloc(sizeof(myDIR));
+    myDIR *ans = malloc(sizeof(myDIR));
     int empty = -1;
     for (int i = 0; i < num_of_dirents; i++)
     {
@@ -426,46 +439,59 @@ int myclosedir(struct myDIR *dirp)
     return 1;
 }
 
-void writebyte(int fd, int opos, char data) { 
+void writebyte(int fd, int opos, char data)
+{
     /**
-     * @brief Write a SINGLE byte into a disk blocks. 
-     * The function calculates the correct relevant blocks (rb) that is needed to be accessed. 
+     * @brief Write a SINGLE byte into a disk blocks.
+     * The function calculates the correct relevant blocks (rb) that is needed to be accessed.
      * if the position that is needed to be wrriten is out of the bounds of the file,
-     * allocate a new disk blocks for it. 
+     * allocate a new disk blocks for it.
      */
     int pos = opos;
     int rb = inodes[fd].first_block;
-    while (pos>=data_size) {
-        pos-=data_size;
-        if (blocks[rb].next==-1) {
+    while (pos >= data_size)
+    {
+        pos -= data_size;
+        if (blocks[rb].next == -1)
+        {
             exit(1);
-        } else if (blocks[rb].next == -2) { // the current blocks is the last blocks, so we allocate a new blocks
-            blocks[rb].next = find_block(); 
+        }
+        else if (blocks[rb].next == -2)
+        { // the current blocks is the last blocks, so we allocate a new blocks
+            blocks[rb].next = find_block();
             rb = blocks[rb].next;
-            blocks[rb].next = -2; 
-        } else {
+            blocks[rb].next = -2;
+        }
+        else
+        {
             rb = blocks[rb].next;
         }
     }
-    if (opos>inodes[fd].size) {
-        inodes[fd].size = opos+1;
+    if (opos > inodes[fd].size)
+    {
+        inodes[fd].size = opos + 1;
     }
     blocks[rb].data[pos] = data;
 }
 
-char readbyte(int fd, int pos) {
+char readbyte(int fd, int pos)
+{
     /**
-     * @brief Read a SINGLE byte from a disk blocks. 
-     * The function calculates the correct relevant blocks (rb) that is needed to be accessed. 
+     * @brief Read a SINGLE byte from a disk blocks.
+     * The function calculates the correct relevant blocks (rb) that is needed to be accessed.
      * The single byte is @return 'ed.
      */
     int rb = inodes[fd].first_block;
-    while (pos>=data_size) {
-        pos-=data_size;
+    while (pos >= data_size)
+    {
+        pos -= data_size;
         rb = blocks[rb].next;
-        if (rb==-1) {
+        if (rb == -1)
+        {
             return -1;
-        } else if (rb == -2) {
+        }
+        else if (rb == -2)
+        {
             return -1;
         }
     }
