@@ -76,36 +76,21 @@ size_t myfread(void *ptr, size_t size, size_t nmemb, myFILE *stream)
 }
 size_t myfwrite(const void *ptr, size_t size, size_t nmemb, myFILE *stream)
 {
-    size_t i;
-    if (!strcmp(stream->mode, "r"))
-    {
-        return -1;
-    }
-    int elements = size * nmemb;
-    char *buffer = (char *)ptr;
-    if (stream->ptr + elements > stream->size)
-    {
-        char *temp = (char*)malloc(stream->size + 1);
-        for (i = 0; i < stream->size; i++)
+    if(stream->mode == "w" || stream->mode == "a" || stream->mode == "r" || stream->mode == "r+"){
+        void *tmp = ptr;
+        int i;
+        for (i = 0; i < nmemb; i++)
         {
-            temp[i] = stream->data[i];
+          //  stream->data[stream->ptr + i] = tmp[i];
+            myfwrite(stream->ptr,tmp,tmp,i);
+            tmp++;
         }
-        free(stream->data);
-        stream->data = (myFILE*)malloc(stream->ptr + elements);
-        for (i = 0; i < stream->size; i++)
-        {
-            stream->data[i] = temp[i];
-        }
-        free(temp);
+        return nmemb;
     }
-    int original_ptr = stream->ptr;
-    for (i = 0; i < elements; i++)
-    {
-        stream->data[stream->ptr + i] = buffer[i];
-        original_ptr++;
+    else {
+        printf("Error: file is not in write mode\n");
+        return 0;
     }
-    stream->ptr = original_ptr;
-    return stream->ptr;
 }
 int myfseek(myFILE *stream, long offset, int whence)
 {
